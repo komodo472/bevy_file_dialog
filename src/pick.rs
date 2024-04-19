@@ -7,9 +7,7 @@ use bevy_tasks::prelude::*;
 use crossbeam_channel::bounded;
 use rfd::AsyncFileDialog;
 
-use crate::{
-    handle_dialog_result, DialogResult, FileDialog, FileDialogPlugin, StreamReceiver, StreamSender,
-};
+use crate::{handle_dialog_result, DialogResult, FileDialog, FileDialogPlugin, StreamReceiver, StreamSender};
 
 /// Event that gets sent when directory path gets selected from file system.
 #[derive(Event)]
@@ -31,9 +29,9 @@ impl<T: PickDirectoryPath> Default for DialogDirectoryPickCanceled<T> {
 }
 
 /// Marker trait saying what directory path are we picking.
-pub trait PickDirectoryPath: Send + Sync + 'static {}
+pub trait PickDirectoryPath: Send + Sync + Clone + 'static {}
 
-impl<T> PickDirectoryPath for T where T: Send + Sync + 'static {}
+impl<T> PickDirectoryPath for T where T: Send + Sync + Clone + 'static {}
 
 /// Event that gets sent when file path gets selected from file system.
 #[derive(Event)]
@@ -41,7 +39,7 @@ pub struct DialogFilePicked<T: PickFilePath> {
     /// Path of picked file.
     pub path: PathBuf,
 
-    marker: PhantomData<T>,
+    pub context: T,
 }
 
 /// Event that gets sent when user closes pick file dialog without picking any file.
@@ -185,7 +183,7 @@ impl<'w, 's, 'a> FileDialog<'w, 's, 'a> {
     /// Does not exist in `wasm32`. If you want cross-platform solution, you
     /// need to use [`FileDialog::load_file`], which does picking and loading in
     /// one step which is compatible with wasm.
-    pub fn pick_file_path<T: PickFilePath>(self) {
+    pub fn pick_file_path<T: PickFilePath>(self, context: T) {
         self.commands.add(|world: &mut World| {
             let sender = world
                 .get_resource::<StreamSender<DialogResult<DialogFilePicked<T>>>>()
@@ -204,7 +202,7 @@ impl<'w, 's, 'a> FileDialog<'w, 's, 'a> {
 
                     let event = DialogFilePicked {
                         path: file.path().to_path_buf(),
-                        marker: PhantomData,
+                        context,
                     };
 
                     sender.send(DialogResult::Single(event)).unwrap();
@@ -221,7 +219,7 @@ impl<'w, 's, 'a> FileDialog<'w, 's, 'a> {
     /// Does not exist in `wasm32`. If you want cross-platform solution, you
     /// need to use [`FileDialog::load_multiple_files`], which does picking and
     /// loading in one step which is compatible with wasm.
-    pub fn pick_multiple_file_paths<T: PickDirectoryPath>(self) {
+    pub fn pick_multiple_file_paths<T: PickDirectoryPath>(self, context: T) {
         self.commands.add(|world: &mut World| {
             let sender = world
                 .get_resource::<StreamSender<DialogResult<DialogFilePicked<T>>>>()
@@ -242,7 +240,7 @@ impl<'w, 's, 'a> FileDialog<'w, 's, 'a> {
                         .into_iter()
                         .map(|file| DialogFilePicked {
                             path: file.path().to_path_buf(),
-                            marker: PhantomData,
+                            context: context.clone(),
                         })
                         .collect();
 

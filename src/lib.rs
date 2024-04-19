@@ -79,15 +79,12 @@ pub use pick::*;
 pub mod prelude {
     //! Prelude containing all types you need for saving/loading files with dialogs.
     pub use crate::{
-        DialogFileLoadCanceled, DialogFileLoaded, DialogFileSaveCanceled, DialogFileSaved,
-        FileDialogExt, FileDialogPlugin,
+        DialogFileLoadCanceled, DialogFileLoaded, DialogFileSaveCanceled, DialogFileSaved, FileDialogExt,
+        FileDialogPlugin,
     };
 
     #[cfg(not(target_arch = "wasm32"))]
-    pub use crate::{
-        DialogDirectoryPickCanceled, DialogDirectoryPicked, DialogFilePickCanceled,
-        DialogFilePicked,
-    };
+    pub use crate::{DialogDirectoryPickCanceled, DialogDirectoryPicked, DialogFilePickCanceled, DialogFilePicked};
 }
 
 /// Add this plugin to Bevy App to use the `FileDialog` resource in your system
@@ -173,9 +170,15 @@ fn handle_dialog_result<E: Event, C: Event + Default>(
 ) {
     for result in receiver.try_iter() {
         match result {
-            DialogResult::Single(event) => { ev_done.send(event); }
-            DialogResult::Batch(events) => { ev_done.send_batch(events); }
-            DialogResult::Canceled => { ev_canceled.send_default(); }
+            DialogResult::Single(event) => {
+                ev_done.send(event);
+            }
+            DialogResult::Batch(events) => {
+                ev_done.send_batch(events);
+            }
+            DialogResult::Canceled => {
+                ev_canceled.send_default();
+            }
         }
     }
 }
